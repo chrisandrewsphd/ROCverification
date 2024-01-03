@@ -28,13 +28,13 @@ AUC_FI <- function(
     na.rm = TRUE))
 
   # True Positive Rate  
-  PrD1_FI <- mean(rho_FI)
-  PrD1Tc_FI <- sapply(thresholds, FUN = function(cc) mean(rho_FI * (dat$score >= cc)))
+  PrD1_FI <- mean(rho_FI, na.rm = TRUE)
+  PrD1Tc_FI <- sapply(thresholds, FUN = function(cc) mean(rho_FI * (dat$score >= cc), na.rm = TRUE))
   TPR_FI <- PrD1Tc_FI / PrD1_FI
 
   # False Positive Rate
   PrD0_FI <- 1 - PrD1_FI
-  PrD0Tc_FI <- sapply(thresholds, FUN = function(cc) mean((1 - rho_FI) * (dat$score >= cc)))
+  PrD0Tc_FI <- sapply(thresholds, FUN = function(cc) mean((1 - rho_FI) * (dat$score >= cc), na.rm = TRUE))
   FPR_FI <- PrD0Tc_FI / PrD0_FI
 
   AUC_FI <- trapezoid(FPR_FI, TPR_FI)
