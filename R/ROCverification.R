@@ -1,3 +1,19 @@
+#' Estimation of ROC in the presence of verification bias
+#'
+#' @param data data.frame
+#' @param dvar name of disease variable
+#' @param tvar name of scoring variable
+#' @param estimators which (of 5) estimators to return
+#' @param dformula formula for d given t and possibly x
+#' @param vformula formula for v given t and possibly x
+#' @param vvar name of selection variable
+#' @param xvar name of additional model covariates (deprecated)
+#' @param cc thresholds at which to estimate TPR and FPR
+#'
+#' @return data.frame with cc, TPR and FPR for requested estimators
+#' @export
+#'
+#' @examples # None yet
 ROCverification <- function(
     data = NULL,
     dvar = NULL, 
@@ -56,8 +72,8 @@ ROCverification <- function(
     # probably should check that vv has only values 0 and 1...
     vd <- ifelse(vv == 1, dd, 0)
     v1md <- ifelse(vv == 1, 1 - dd, 0)
-    retval$tprcc <- apply(ineqmat, 1, weighted.mean, w = vd)
-    retval$fprcc <- apply(ineqmat, 1, weighted.mean, w = v1md)
+    retval$tprcc <- apply(ineqmat, 1, stats::weighted.mean, w = vd)
+    retval$fprcc <- apply(ineqmat, 1, stats::weighted.mean, w = v1md)
     attr(retval, "auccc") <- trapezoid(retval$fprcc, retval$tprcc)
   }
   
@@ -72,21 +88,21 @@ ROCverification <- function(
     #     "%s ~ %s + %s", dvar, tvar,
     #     paste(xvar, sep = " + ")))
     # }
-    dmod <- glm(dformula, family = binomial, data = data, subset = vv_ == 1)
-    dpreds <- predict(dmod, type = "response", newdata = data)
+    dmod <- stats::glm(dformula, family = "binomial", data = data, subset = vv_ == 1)
+    dpreds <- stats::predict(dmod, type = "response", newdata = data)
   }
   
   if ("fi" %in% estimators) {
-    retval$tprfi <- apply(ineqmat, 1, weighted.mean, w = dpreds)
-    retval$fprfi <- apply(ineqmat, 1, weighted.mean, w = 1-dpreds)
+    retval$tprfi <- apply(ineqmat, 1, stats::weighted.mean, w = dpreds)
+    retval$fprfi <- apply(ineqmat, 1, stats::weighted.mean, w = 1-dpreds)
     attr(retval, "aucfi") <- trapezoid(retval$fprfi, retval$tprfi)
   }
   
   if ("msi" %in% estimators) {
     obspreds <- ifelse(vv == 1, dd, dpreds)
-    retval$tprmsi <- apply(ineqmat, 1, weighted.mean, w = obspreds)
+    retval$tprmsi <- apply(ineqmat, 1, stats::weighted.mean, w = obspreds)
     obs1mpreds <- ifelse(vv == 1, 1-dd, 1-dpreds)
-    retval$fprmsi <- apply(ineqmat, 1, weighted.mean, w = obs1mpreds)
+    retval$fprmsi <- apply(ineqmat, 1, stats::weighted.mean, w = obs1mpreds)
     attr(retval, "aucmsi") <- trapezoid(retval$fprmsi, retval$tprmsi)
   }
 
@@ -101,24 +117,24 @@ ROCverification <- function(
     #     "%s ~ %s + %s", vvar, tvar,
     #     paste(xvar, sep = " + ")))
     # }
-    vmod <- glm(vformula, family = binomial, data = data)
-    vpreds <- predict(vmod, type = "response")
+    vmod <- stats::glm(vformula, family = "binomial", data = data)
+    vpreds <- stats::predict(vmod, type = "response")
   }
   
   if ("ipw" %in% estimators) {
-    retval$tpripw <- apply(ineqmat, 1, weighted.mean, w = vd/vpreds)
-    retval$fpripw <- apply(ineqmat, 1, weighted.mean, w = v1md/vpreds)
+    retval$tpripw <- apply(ineqmat, 1, stats::weighted.mean, w = vd/vpreds)
+    retval$fpripw <- apply(ineqmat, 1, stats::weighted.mean, w = v1md/vpreds)
     attr(retval, "aucipw") <- trapezoid(retval$fpripw, retval$tpripw)
   }
 
   if ("dr" %in% estimators) {
     retval$tprdr <- apply(
       ineqmat, 1, 
-      weighted.mean,
+      stats::weighted.mean,
       w = (vd - (vv - vpreds) * dpreds)/vpreds)
     retval$fprdr <- apply(
       ineqmat, 1,
-      weighted.mean,
+      stats::weighted.mean,
       w = (v1md - (vv - vpreds) * (1 - dpreds))/vpreds)
     attr(retval, "aucdr") <- trapezoid(retval$fprdr, retval$tprdr)
   }  
