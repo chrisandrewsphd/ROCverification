@@ -3,20 +3,20 @@ fi <- function(data, dd, tt, xx = NULL, cc = NULL) {
   
   if (is.null(cc)) cc <- unique(sort(data[[tt]]))
   form <- if (is.null(xx)) {
-    as.formula(sprintf("%s ~ %s", dd, tt))
+    stats::as.formula(sprintf("%s ~ %s", dd, tt))
   } else {
-    as.formula(sprintf(
+    stats::as.formula(sprintf(
       "%s ~ %s + %s", dd, tt,
       paste(xx, sep = " + ")))
   }
   
-  mod <- glm(form, data = data, family = "binomial")
-  preds <- predict(mod, type = "response")
+  mod <- stats::glm(form, data = data, family = "binomial")
+  preds <- stats::predict(mod, type = "response")
   
   ineqmat <- outer(cc, data[[tt]], FUN = function(a, b) a <= b)
   
-  tprfi <- apply(ineqmat, 1, weighted.mean, w = preds)
-  fprfi <- apply(ineqmat, 1, weighted.mean, w = 1-preds)
+  tprfi <- apply(ineqmat, 1, stats::weighted.mean, w = preds)
+  fprfi <- apply(ineqmat, 1, stats::weighted.mean, w = 1-preds)
   
   retval <- data.frame(
     cc, tprfi, fprfi
@@ -34,15 +34,15 @@ msi <- function(data, dd, tt, vv, xx = NULL, cc = NULL) {
   
   if (is.null(cc)) cc <- unique(sort(data[[tt]]))
   form <- if (is.null(xx)) {
-    as.formula(sprintf("%s ~ %s", dd, tt))
+    stats::as.formula(sprintf("%s ~ %s", dd, tt))
   } else {
-    as.formula(sprintf(
+    stats::as.formula(sprintf(
       "%s ~ %s + %s", dd, tt,
       paste(xx, sep = " + ")))
   }
   
-  mod <- glm(form, data = data, family = "binomial")
-  preds <- predict(mod, type = "response")
+  mod <- stats::glm(form, data = data, family = "binomial")
+  preds <- stats::predict(mod, type = "response")
   
   obspreds <- ifelse(data[[vv]], data[[dd]], preds)
   
@@ -51,8 +51,8 @@ msi <- function(data, dd, tt, vv, xx = NULL, cc = NULL) {
   
   ineqmat <- outer(cc, data[[tt]], FUN = function(a, b) a <= b)
   
-  tprmsi <- apply(ineqmat, 1, weighted.mean, w = obspreds)
-  fprmsi <- apply(ineqmat, 1, weighted.mean, w = 1-obspreds)
+  tprmsi <- apply(ineqmat, 1, stats::weighted.mean, w = obspreds)
+  fprmsi <- apply(ineqmat, 1, stats::weighted.mean, w = 1-obspreds)
   
   retval <- data.frame(
     cc, tprmsi, fprmsi
@@ -67,20 +67,20 @@ ipw <- function(data, dd, tt, vv, xx = NULL, cc = NULL) {
   
   if (is.null(cc)) cc <- unique(sort(data[[tt]]))
   vform <- if (is.null(xx)) {
-    as.formula(sprintf("%s ~ %s", vv, tt))
+    stats::as.formula(sprintf("%s ~ %s", vv, tt))
   } else {
-    as.formula(sprintf(
+    stats::as.formula(sprintf(
       "%s ~ %s + %s", vv, tt,
       paste(xx, sep = " + ")))
   }
   
-  vmod <- glm(vform, data = data, family = "binomial")
-  vpreds <- predict(vmod, type = "response")
+  vmod <- stats::glm(vform, data = data, family = "binomial")
+  vpreds <- stats::predict(vmod, type = "response")
   
   ineqmat <- outer(cc, data[[tt]], FUN = function(a, b) a <= b)
   
-  tpripw <- apply(ineqmat, 1, weighted.mean, w = data[[vv]]*data[[dd]]/vpreds)
-  fpripw <- apply(ineqmat, 1, weighted.mean, w = data[[vv]]*(1-data[[dd]])/vpreds)
+  tpripw <- apply(ineqmat, 1, stats::weighted.mean, w = data[[vv]]*data[[dd]]/vpreds)
+  fpripw <- apply(ineqmat, 1, stats::weighted.mean, w = data[[vv]]*(1-data[[dd]])/vpreds)
   
   retval <- data.frame(
     cc, tpripw, fpripw
@@ -95,29 +95,29 @@ dr <- function(data, dd, tt, vv, xx = NULL, cc = NULL) {
   
   if (is.null(cc)) cc <- unique(sort(data[[tt]]))
   form <- if (is.null(xx)) {
-    as.formula(sprintf("%s ~ %s", dd, tt))
+    stats::as.formula(sprintf("%s ~ %s", dd, tt))
   } else {
-    as.formula(sprintf(
+    stats::as.formula(sprintf(
       "%s ~ %s + %s", dd, tt,
       paste(xx, sep = " + ")))
   }
   vform <- if (is.null(xx)) {
-    as.formula(sprintf("%s ~ %s", vv, tt))
+    stats::as.formula(sprintf("%s ~ %s", vv, tt))
   } else {
-    as.formula(sprintf(
+    stats::as.formula(sprintf(
       "%s ~ %s + %s", vv, tt,
       paste(xx, sep = " + ")))
   }
   
-  mod <- glm(form, data = data, family = "binomial")
-  preds <- predict(mod, type = "response")
-  vmod <- glm(vform, data = data, family = "binomial")
-  vpreds <- predict(vmod, type = "response")
+  mod <- stats::glm(form, data = data, family = "binomial")
+  preds <- stats::predict(mod, type = "response")
+  vmod <- stats::glm(vform, data = data, family = "binomial")
+  vpreds <- stats::predict(vmod, type = "response")
   
   ineqmat <- outer(cc, data[[tt]], FUN = function(a, b) a <= b)
   
-  tprdr <- apply(ineqmat, 1, weighted.mean, w = data[[vv]]*data[[dd]]/vpreds - (data[[vv]]-vpreds)*preds/vpreds)
-  fprdr <- apply(ineqmat, 1, weighted.mean, w = data[[vv]]*(1-data[[dd]])/vpreds - (data[[vv]]-vpreds)*(1-preds)/vpreds)
+  tprdr <- apply(ineqmat, 1, stats::weighted.mean, w = data[[vv]]*data[[dd]]/vpreds - (data[[vv]]-vpreds)*preds/vpreds)
+  fprdr <- apply(ineqmat, 1, stats::weighted.mean, w = data[[vv]]*(1-data[[dd]])/vpreds - (data[[vv]]-vpreds)*(1-preds)/vpreds)
   
   retval <- data.frame(
     cc, tprdr, fprdr
