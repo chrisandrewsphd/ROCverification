@@ -12,7 +12,6 @@ ROCverification(
   dformula = NULL,
   vformula = NULL,
   vvar = NULL,
-  xvar = NULL,
   cc = NULL
 )
 }
@@ -30,8 +29,6 @@ ROCverification(
 \item{vformula}{formula for v given t and possibly x}
 
 \item{vvar}{name of selection variable}
-
-\item{xvar}{name of additional model covariates (deprecated)}
 
 \item{cc}{thresholds at which to estimate TPR and FPR}
 }

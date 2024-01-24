@@ -7,7 +7,6 @@
 #' @param dformula formula for d given t and possibly x
 #' @param vformula formula for v given t and possibly x
 #' @param vvar name of selection variable
-#' @param xvar name of additional model covariates (deprecated)
 #' @param cc thresholds at which to estimate TPR and FPR
 #'
 #' @return data.frame with cc, TPR and FPR for requested estimators
@@ -22,7 +21,6 @@ ROCverification <- function(
     dformula = NULL,
     vformula = NULL,
     vvar = NULL,
-    xvar = NULL,
     cc = NULL) {
   # not tested with missing data (NA) in data
   
