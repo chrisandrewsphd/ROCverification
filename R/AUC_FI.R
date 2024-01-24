@@ -1,13 +1,28 @@
-#' Compute AUC (and ROC) when verification sample selected by preliminary score, Full Imputation Method
+#' Compute AUC (and ROC) when verification sample selected by preliminary score,
+#' Full Imputation Method (old format; consider ROCverification() instead)
 #'
 #' @param dat data.frame containing model variables, including scrvar
-#' @param model Model to estimate selection to verification sample based on screening score
+#' @param model Model to estimate selection to verification sample based on
+#'   screening score
 #' @param scrvar Name of screening variable within dat
 #'
-#' @return Area under the ROC curve estimated using Full Imputation method (see Alonzo and Pepe, 2003). Also up to 100 points of ROC curve.
+#' @return Area under the ROC curve estimated using Full Imputation method (see
+#'   Alonzo and Pepe, 2003). Also up to 100 points of ROC curve.
 #' @export
 #'
-#' @examples # none yet
+#' @examples
+#' dat1 <- data.frame(
+#'   disease = rep(c(0, 1), each = 200),
+#'   score = runif(400, min = rep(c(0, 0.6), each = 200),
+#'    max = rep(c(0.4, 1), each = 200)),
+#'   v = rbinom(400, size = 1, prob = rep(c(0.3, 0.7), each = 200)))
+#' dat1$diseasev <- ifelse(dat1$v == 1, dat1$disease, NA)
+#'
+#' # rms::val.prob(dat1$score, dat1$disease)
+#'
+#' # rms::val.prob(dat1$score[dat1$v == 1], dat1$disease[dat1$v == 1])
+#'
+#' AUC_FI(dat1, model = diseasev ~ qlogis(score))
 AUC_FI <- function(
     dat,
     model = disease ~ qlogis(score), 

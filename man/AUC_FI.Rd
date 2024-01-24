@@ -2,23 +2,38 @@
 % Please edit documentation in R/AUC_FI.R
 \name{AUC_FI}
 \alias{AUC_FI}
-\title{Compute AUC (and ROC) when verification sample selected by preliminary score, Full Imputation Method}
+\title{Compute AUC (and ROC) when verification sample selected by preliminary score,
+Full Imputation Method (old format; consider ROCverification() instead)}
 \usage{
 AUC_FI(dat, model = disease ~ qlogis(score), scrvar = "score")
 }
 \arguments{
 \item{dat}{data.frame containing model variables, including scrvar}
 
-\item{model}{Model to estimate selection to verification sample based on screening score}
+\item{model}{Model to estimate selection to verification sample based on
+screening score}
 
 \item{scrvar}{Name of screening variable within dat}
 }
 \value{
-Area under the ROC curve estimated using Full Imputation method (see Alonzo and Pepe, 2003). Also up to 100 points of ROC curve.
+Area under the ROC curve estimated using Full Imputation method (see
+Alonzo and Pepe, 2003). Also up to 100 points of ROC curve.
 }
 \description{
-Compute AUC (and ROC) when verification sample selected by preliminary score, Full Imputation Method
+Compute AUC (and ROC) when verification sample selected by preliminary score,
+Full Imputation Method (old format; consider ROCverification() instead)
 }
 \examples{
-# none yet
+dat1 <- data.frame(
+  disease = rep(c(0, 1), each = 200),
+  score = runif(400, min = rep(c(0, 0.6), each = 200),
+   max = rep(c(0.4, 1), each = 200)),
+  v = rbinom(400, size = 1, prob = rep(c(0.3, 0.7), each = 200)))
+dat1$diseasev <- ifelse(dat1$v == 1, dat1$disease, NA)
+
+# rms::val.prob(dat1$score, dat1$disease)
+
+# rms::val.prob(dat1$score[dat1$v == 1], dat1$disease[dat1$v == 1])
+
+AUC_FI(dat1, model = diseasev ~ qlogis(score))
 }
