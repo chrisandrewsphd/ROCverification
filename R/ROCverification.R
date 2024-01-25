@@ -1,27 +1,60 @@
 #' Estimation of ROC in the presence of verification bias
 #'
-#' @param data data.frame
-#' @param dvar name of disease variable
-#' @param tvar name of scoring variable
-#' @param estimators which (of 5) estimators to return
-#' @param dformula formula for d given t and possibly x
-#' @param vformula formula for v given t and possibly x
-#' @param vvar name of selection variable
-#' @param cc thresholds at which to estimate TPR and FPR
+#' @param data data.frame containing the variables \code{dvar}, \code{tvar}, \code{vvar}, and others in the formulae \code{dformula} and \code{vformula}.
+#' @param dvar name of disease variable. Currently, this variable must be coded 0/1.
+#' @param tvar name of scoring variable to be assessed for predicting \code{dvar} with ROC/AUC.
+#' @param estimators which estimators to return. Default is all 5. Options are
+#' \code{"cc"} for the complete case (or naive) estimator,
+#' \code{"fi"} for the full imputation estimator,
+#' \code{"msi"} for the mean score imputation estimator,
+#' \code{"ipw"} for the inverse probability weighting estimator, and
+#' \code{"spe"} for the semiparametric efficient (double robust) estimator.
+#' @param dformula formula for d given t (and possibly other variables).
+#' Used in \code{glm(dformula, family = "binomial")}.
+#' @param vformula formula for v given t (and possibly other variables).
+#' \code{glm(vformula, family = "binomial")} 
+#' @param vvar name of variable in \code{data} indicating the 
+#' verification sample (i.e., observations that were 
+#' selected to have gold standard measured).
+#' Currently, this variable must be coded 0/1.
+#' If no variable name is provided (\code{NULL}, default), then the
+#' function uses \code{!is.na(data[[dvar]])} to identify verification sample.
+#' @param thresh thresholds at which to estimate TPR and FPR
 #'
-#' @return data.frame with cc, TPR and FPR for requested estimators
+#' @return data.frame with thresh, TPR and FPR for requested estimators.
+#' Attributes are AUCs for each requested estimator
+#' (e.g., "auccc", "aucfi", ...).
+#' 
+#' @references Alonzo and Pepe, "Assessing accuracy of a
+#'  continuous screening test in the presence of verification bias".
+#'  Appl. Statist. (2005) 54, Part 1, pp. 173–190
 #' @export
 #'
-#' @examples # None yet
+#' @examples
+#' dat1 <- data.frame(
+#'   disease = rep(c(0, 1), each = 200),
+#'   score = runif(400, min = rep(c(0, 0.4), each = 200),
+#'    max = rep(c(0.6, 1), each = 200)),
+#'    v = rbinom(400, size = 1, prob = rep(c(0.3, 0.7), each = 200)))
+#' dat1$diseasev <- ifelse(dat1$v == 1, dat1$disease, NA)
+#' out <- ROCverification(
+#'   dat1, dvar = "diseasev", tvar = "score",
+#'   dformula = disease ~ plogis(score),
+#'   estimators = c("cc", "fi"))
+#' str(out)
+#' attr(out, "auccc")
+#' attr(out, "aucfi")
+#' plot(tprcc ~ fprcc, data = out, lty = 1, type = "l")
+#' lines(tprfi ~ fprfi, data = out, col = 2, lty = 2)
 ROCverification <- function(
     data = NULL,
     dvar = NULL, 
     tvar = NULL,
-    estimators = c("cc", "fi", "msi", "ipw", "dr"),
+    estimators = c("cc", "fi", "msi", "ipw", "spe"),
     dformula = NULL,
     vformula = NULL,
     vvar = NULL,
-    cc = NULL) {
+    thresh = NULL) {
   # not tested with missing data (NA) in data
   
   estimators <- match.arg(estimators, several.ok = TRUE)
@@ -40,8 +73,8 @@ ROCverification <- function(
   
   # if vvar provided, use it to select those observations
   # otherwise, define vv==1 iff dd is not missing
-  data$vv_ <- vv <- if (is.null(vvar)) {
-    as.numeric(!is.na(data[[dd]]))
+  data$vv <- vv <- if (is.null(vvar)) { # need in both environments for scoping
+    as.numeric(!is.na(dd)) # or as.numeric(!is.na(data[[dvar]]))
   } else {
     if (!is.character(vvar)) stop("'vvar' must be character")
     if (!(vvar %in% names(data))) stop("'vvar' must be the name of a variable in 'data'")
@@ -49,20 +82,20 @@ ROCverification <- function(
   }
   if (any(is.na(vv))) stop("'data[[vvar]]' must not have missing values")
 
-  # if cc provided, use those (sorted, unique) thresholds
+  # if thresh provided, use those (sorted, unique) thresholds
   # otherwise, use (sorted, unique) values of tvar.
   # note, sort removes NAs.
-  cc <- unique(sort(
-    if (!is.null(cc)) cc else data[[tvar]]))
+  thresh <- unique(sort(
+    if (!is.null(thresh)) thresh else data[[tvar]]))
   
   # begin data.frame to return
-  retval <- data.frame(cc = cc)
+  retval <- data.frame(thresh = thresh)
 
   # logical matrix of inequalities
-  # nrows = length(cc)
+  # nrows = length(thresh)
   # ncols = nrow(data)
   # i,j element TRUE iff c_i<=T_j
-  ineqmat <- outer(cc, data[[tvar]], FUN = function(a, b) a <= b)
+  ineqmat <- outer(thresh, data[[tvar]], FUN = function(a, b) a <= b)
   
   # complete case estimator
   if ("cc" %in% estimators) {
@@ -76,8 +109,8 @@ ROCverification <- function(
   }
   
   # estimators that require an estimate of rho_i
-  if (any(c("fi", "msi", "dr") %in% estimators)) {
-    if (is.null(dformula)) stop("'dformula' needed for fi, msi, and dr estimates")
+  if (any(c("fi", "msi", "spe") %in% estimators)) {
+    if (is.null(dformula)) stop("'dformula' needed for fi, msi, and spe estimates")
     # possible default
     # dformula <- if (is.null(xvar)) {
     #   as.formula(sprintf("%s ~ %s", dvar, tvar))
@@ -86,7 +119,9 @@ ROCverification <- function(
     #     "%s ~ %s + %s", dvar, tvar,
     #     paste(xvar, sep = " + ")))
     # }
-    dmod <- stats::glm(dformula, family = "binomial", data = data, subset = vv_ == 1)
+    dmod <- stats::glm(
+      dformula, family = "binomial",
+      data = data, subset = vv == 1)
     dpreds <- stats::predict(dmod, type = "response", newdata = data)
   }
   
@@ -105,8 +140,8 @@ ROCverification <- function(
   }
 
   # estimators that require an estimate of pi_i
-  if (any(c("ipw", "dr") %in% estimators)) {
-    if (is.null(vformula)) stop("'vformula' needed for ipw and dr estimates")
+  if (any(c("ipw", "spe") %in% estimators)) {
+    if (is.null(vformula)) stop("'vformula' needed for ipw and spe estimates")
     # possible default
     # vformula <- if (is.null(xvar)) {
     #   as.formula(sprintf("%s ~ %s", vvar, tvar))
@@ -125,16 +160,16 @@ ROCverification <- function(
     attr(retval, "aucipw") <- trapezoid(retval$fpripw, retval$tpripw)
   }
 
-  if ("dr" %in% estimators) {
-    retval$tprdr <- apply(
+  if ("spe" %in% estimators) {
+    retval$tprspe <- apply(
       ineqmat, 1, 
       stats::weighted.mean,
       w = (vd - (vv - vpreds) * dpreds)/vpreds)
-    retval$fprdr <- apply(
+    retval$fprspe <- apply(
       ineqmat, 1,
       stats::weighted.mean,
       w = (v1md - (vv - vpreds) * (1 - dpreds))/vpreds)
-    attr(retval, "aucdr") <- trapezoid(retval$fprdr, retval$tprdr)
+    attr(retval, "aucspe") <- trapezoid(retval$fprspe, retval$tprspe)
   }  
   
   return(retval)
