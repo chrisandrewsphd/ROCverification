@@ -39,7 +39,7 @@
 #' dat1$diseasev <- ifelse(dat1$v == 1, dat1$disease, NA)
 #' out <- ROCverification(
 #'   dat1, dvar = "diseasev", tvar = "score",
-#'   dformula = disease ~ plogis(score),
+#'   dformula = disease ~ qlogis(score),
 #'   estimators = c("cc", "fi"))
 #' str(out)
 #' attr(out, "auccc")
